@@ -22,24 +22,35 @@ export function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: PiePr
     <div className="w-full flex flex-col items-center">
       <svg width={size} height={size} onClick={handleClick} className="touch-none select-none">
         <circle cx={center} cy={center} r={wedgeRadius} className="fill-neutral-800" />
-        {entries.map(e=>{
-          const startA = (e.start/MINUTES_PER_DAY)*360; const endA = (e.end/MINUTES_PER_DAY)*360;
-          const path = arcPath(center, center, wedgeRadius, startA, endA)
-          const lightness = SHADE_LIGHTNESS[normalizeShade(e.shade)-1] ?? 50;
-          const isHL = highlightId===e.id;
-          const midA = (startA + endA)/2;
-          const labelPos = polar(center, center, wedgeRadius*0.55, midA);
+        {(()=>{
+          const segments = entries.map(e=>{
+            const startA = (e.start/MINUTES_PER_DAY)*360; const endA = (e.end/MINUTES_PER_DAY)*360;
+            const path = arcPath(center, center, wedgeRadius, startA, endA);
+            const lightness = SHADE_LIGHTNESS[normalizeShade(e.shade)-1] ?? 50;
+            const isHL = highlightId===e.id;
+            const midA = (startA + endA)/2;
+            const labelPos = polar(center, center, wedgeRadius*0.82, midA);
+            return { e, path, lightness, isHL, labelPos };
+          });
           return (
-            <g key={e.id} onClick={(ev)=>{ev.stopPropagation(); onEdit(e.id)}} className="cursor-pointer">
-              <path d={path} style={{ fill: `hsl(0 0% ${lightness}%)`, filter: isHL? 'brightness(1.5)': undefined }} className="transition-all duration-150" />
-              {e.title && (
-                <text x={labelPos.x} y={labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill="#999" style={{ pointerEvents:'none' }}>
-                  {e.title}
-                </text>
-              )}
-            </g>
+            <>
+              {/* paths layer */}
+              {segments.map(s=> (
+                <g key={s.e.id} onClick={(ev)=>{ev.stopPropagation(); onEdit(s.e.id)}} className="cursor-pointer">
+                  <path d={s.path} style={{ fill: `hsl(0 0% ${s.lightness}%)`, filter: s.isHL? 'brightness(1.5)': undefined }} className="transition-all duration-150" />
+                </g>
+              ))}
+              {/* labels layer (always on top) */}
+              <g pointerEvents="none">
+                {segments.map(s=> s.e.title && (
+                  <text key={s.e.id} x={s.labelPos.x} y={s.labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill="#ccc" style={{ textShadow: '0 0 2px rgba(0,0,0,0.6)' }}>
+                    {s.e.title}
+                  </text>
+                ))}
+              </g>
+            </>
           )
-        })}
+        })()}
   {highlightNew && (()=>{ const startA=(highlightNew.start/MINUTES_PER_DAY)*360; const endA=(highlightNew.end/MINUTES_PER_DAY)*360; const p=arcPath(center,center,wedgeRadius,startA,endA); return <path d={p} className="fill-blue-500/60 pointer-events-none" /> })()}
         {[...Array(24)].map((_,h)=>{
           const a = (h/24)*360; const rad = (a-90)*Math.PI/180;
