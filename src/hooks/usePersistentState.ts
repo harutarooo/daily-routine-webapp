@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from 'react'
 import type { State, DaySchedule, DayTemplate, ScheduleEntry, Mode } from '../types/index.ts'
-import { STORAGE_KEYS, SLOT_MINUTES } from '../constants/schedule.ts'
+import { STORAGE_KEYS, SLOT_MINUTES, MINUTES_PER_DAY, LAST_SLOT_START, normalizeShade } from '../constants/schedule.ts'
 
 const emptySchedule: DaySchedule = { entries: [] }
 
@@ -10,11 +10,6 @@ function cloneEntry(e: ScheduleEntry): ScheduleEntry { return { ...e, id: crypto
 function dedupeAndSort(entries: ScheduleEntry[]): ScheduleEntry[] { return [...entries].sort((a,b)=>a.start-b.start) }
 function overlapping(a: ScheduleEntry, b: ScheduleEntry){ return a.start < b.end && b.start < a.end }
 
-function normalizeShade(shade:number){
-  if(shade>=1 && shade<=5) return shade;
-  if(shade>5) return Math.min(5, Math.max(1, Math.round(shade/2)));
-  return 3;
-}
 
 export type Action =
   | { type: 'switch', mode: Mode }
@@ -68,8 +63,8 @@ export function usePersistentState(){
     const weekendRaw = safeParse<DaySchedule>(localStorage.getItem(STORAGE_KEYS.weekend)) || emptySchedule
     const templatesRaw = safeParse<DayTemplate[]>(localStorage.getItem(STORAGE_KEYS.templates)) || []
     const normalize = (s:DaySchedule):DaySchedule => ({ entries: s.entries.map(e=> ({ ...e,
-      start: Math.min(1410, Math.round(e.start / SLOT_MINUTES) * SLOT_MINUTES),
-      end: Math.min(1440, Math.round(e.end / SLOT_MINUTES) * SLOT_MINUTES),
+  start: Math.min(LAST_SLOT_START, Math.round(e.start / SLOT_MINUTES) * SLOT_MINUTES),
+  end: Math.min(MINUTES_PER_DAY, Math.round(e.end / SLOT_MINUTES) * SLOT_MINUTES),
       shade: normalizeShade(e.shade)
     })).filter(e=> e.end>e.start) })
     const weekday = normalize(weekdayRaw)

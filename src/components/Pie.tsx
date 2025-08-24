@@ -1,5 +1,5 @@
 import { arcPath, polar } from '../utils/geometry.ts'
-import { SLOT_MINUTES, SHADE_LIGHTNESS } from '../constants/schedule.ts'
+import { SLOT_MINUTES, SHADE_LIGHTNESS, MINUTES_PER_DAY, normalizeShade } from '../constants/schedule.ts'
 import type { ScheduleEntry } from '../types/index.ts'
 
 export interface HighlightNew { start:number; end:number }
@@ -15,20 +15,15 @@ export function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: PiePr
     const x = e.clientX - rect.left - center;
     const y = e.clientY - rect.top - center;
     const angle = (Math.atan2(y,x) * 180/Math.PI + 450) % 360;
-    const minutes = Math.round((angle/360)*1440/SLOT_MINUTES)*SLOT_MINUTES % 1440;
+  const minutes = Math.round((angle/360)*MINUTES_PER_DAY/SLOT_MINUTES)*SLOT_MINUTES % MINUTES_PER_DAY;
     onAdd(minutes);
-  }
-  function normalizeShade(shade:number){
-    if(shade>=1 && shade<=5) return shade;
-    if(shade>5) return Math.min(5, Math.max(1, Math.round(shade/2)));
-    return 3;
   }
   return (
     <div className="w-full flex flex-col items-center">
       <svg width={size} height={size} onClick={handleClick} className="touch-none select-none">
         <circle cx={center} cy={center} r={wedgeRadius} className="fill-neutral-800" />
         {entries.map(e=>{
-          const startA = (e.start/1440)*360; const endA = (e.end/1440)*360;
+          const startA = (e.start/MINUTES_PER_DAY)*360; const endA = (e.end/MINUTES_PER_DAY)*360;
           const path = arcPath(center, center, wedgeRadius, startA, endA)
           const lightness = SHADE_LIGHTNESS[normalizeShade(e.shade)-1] ?? 50;
           const isHL = highlightId===e.id;
@@ -45,7 +40,7 @@ export function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: PiePr
             </g>
           )
         })}
-        {highlightNew && (()=>{ const startA=(highlightNew.start/1440)*360; const endA=(highlightNew.end/1440)*360; const p=arcPath(center,center,wedgeRadius,startA,endA); return <path d={p} className="fill-blue-500/60 pointer-events-none" /> })()}
+  {highlightNew && (()=>{ const startA=(highlightNew.start/MINUTES_PER_DAY)*360; const endA=(highlightNew.end/MINUTES_PER_DAY)*360; const p=arcPath(center,center,wedgeRadius,startA,endA); return <path d={p} className="fill-blue-500/60 pointer-events-none" /> })()}
         {[...Array(24)].map((_,h)=>{
           const a = (h/24)*360; const rad = (a-90)*Math.PI/180;
           const tickInner = wedgeRadius - 8; const tickOuter = wedgeRadius - 2;

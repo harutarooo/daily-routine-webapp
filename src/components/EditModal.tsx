@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SLOT_MINUTES, SHADE_LIGHTNESS } from '../constants/schedule.ts'
+import { SLOT_MINUTES, SHADE_LIGHTNESS, MINUTES_PER_DAY } from '../constants/schedule.ts'
 import type { EditData } from '../types/index.ts'
 import { Wheel } from './Wheel.tsx'
 
@@ -9,10 +9,10 @@ export function EditModal({ data, onClose, onSave, onDelete }:{ data: EditData|n
   if(!form) return null
   function update<K extends keyof EditData>(k:K, v:EditData[K]){ setForm(prev => prev ? { ...prev, [k]: v } : prev) }
   function save(){ if(form) onSave(form) }
-  const slots = Array.from({length: 1440 / SLOT_MINUTES}, (_,i)=> i*SLOT_MINUTES)
-  const endSlots = [...slots.slice(1), 1440]
+  const slots = Array.from({length: MINUTES_PER_DAY / SLOT_MINUTES}, (_,i)=> i*SLOT_MINUTES)
+  const endSlots = [...slots.slice(1), MINUTES_PER_DAY]
   const DURATIONS = [30, 60, 90, 120, 300];
-  function applyDuration(mins:number){ if(!form) return; update('end', Math.min(1440, form.start + mins)); }
+  function applyDuration(mins:number){ if(!form) return; update('end', Math.min(MINUTES_PER_DAY, form.start + mins)); }
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-4">
       <div className="w-full max-w-sm bg-neutral-800 text-neutral-100 rounded-xl p-4 space-y-3 max-h-[90%] overflow-y-auto shadow-xl border border-neutral-700">
@@ -23,7 +23,7 @@ export function EditModal({ data, onClose, onSave, onDelete }:{ data: EditData|n
         <div className="space-y-2">
           <input maxLength={8} value={form.title} onChange={e=>update('title', e.target.value)} placeholder="タイトル" className="w-full bg-neutral-700 border border-neutral-600 rounded px-2 py-1 placeholder:text-neutral-400" />
           <div className="flex gap-4">
-            <div className="flex-1"><Wheel label="開始" value={form.start} onChange={v=>{ if(v < form.end){ update('start', v) } else { update('start', v); update('end', Math.min(1440, v + SLOT_MINUTES)) } }} options={slots} /></div>
+            <div className="flex-1"><Wheel label="開始" value={form.start} onChange={v=>{ if(v < form.end){ update('start', v) } else { update('start', v); update('end', Math.min(MINUTES_PER_DAY, v + SLOT_MINUTES)) } }} options={slots} /></div>
             <div className="flex-1"><Wheel label="終了" value={form.end} onChange={v=>{ if(v>form.start){ update('end', v) } }} options={endSlots} /></div>
           </div>
           <div className="flex flex-wrap gap-2 pt-1">

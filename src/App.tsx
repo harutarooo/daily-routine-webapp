@@ -1,7 +1,7 @@
 import { useState } from 'react'
 // ...分離したモジュールをインポート
 import { usePersistentState } from './hooks/usePersistentState.ts'
-import { SLOT_MINUTES } from './constants/schedule.ts'
+import { SLOT_MINUTES, MINUTES_PER_DAY } from './constants/schedule.ts'
 import { Pie } from './components/Pie.tsx'
 import { EditModal } from './components/EditModal.tsx'
 import { TemplateModal } from './components/TemplateModal.tsx'
@@ -17,7 +17,7 @@ export default function App(){
 
   function createAt(minute:number){
     setHighlightId(undefined)
-    const start = minute; const end = Math.min(minute+SLOT_MINUTES, 1440)
+  const start = minute; const end = Math.min(minute+SLOT_MINUTES, MINUTES_PER_DAY)
     setHighlightNew({ start, end })
     const entry: ScheduleEntry = { id: crypto.randomUUID(), title: '', start, end, shade: 3 }
     setTimeout(()=>{ setEditing(entry) }, 150)
