@@ -33,12 +33,11 @@ export function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: PiePr
           const lightness = SHADE_LIGHTNESS[normalizeShade(e.shade)-1] ?? 50;
           const isHL = highlightId===e.id;
           const midA = (startA + endA)/2;
-          const span = endA - startA;
           const labelPos = polar(center, center, wedgeRadius*0.55, midA);
           return (
             <g key={e.id} onClick={(ev)=>{ev.stopPropagation(); onEdit(e.id)}} className="cursor-pointer">
               <path d={path} style={{ fill: `hsl(0 0% ${lightness}%)`, filter: isHL? 'brightness(1.5)': undefined }} className="transition-all duration-150" />
-              {e.title && span >= 8 && (
+              {e.title && (
                 <text x={labelPos.x} y={labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill={lightness<50? '#fff':'#111'} style={{ pointerEvents:'none' }}>
                   {e.title}
                 </text>
