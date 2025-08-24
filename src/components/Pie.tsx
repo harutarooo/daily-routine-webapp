@@ -1,4 +1,5 @@
 import { arcPath, polar } from '../utils/geometry.ts'
+import { minutesToLabel } from '../utils/time.ts'
 import { SLOT_MINUTES, SHADE_LIGHTNESS, MINUTES_PER_DAY, normalizeShade } from '../constants/schedule.ts'
 import type { ScheduleEntry } from '../types/index.ts'
 
@@ -42,11 +43,19 @@ export function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: PiePr
               ))}
               {/* labels layer (always on top) */}
               <g pointerEvents="none">
-                {segments.map(s=> s.e.title && (
-                  <text key={s.e.id} x={s.labelPos.x} y={s.labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill="#ccc" style={{ textShadow: '0 0 2px rgba(0,0,0,0.6)' }}>
-                    {s.e.title}
-                  </text>
-                ))}
+                {segments.map(s=> s.e.title && (()=>{
+                  const dur = s.e.end - s.e.start; // minutes
+                  return (
+                    <g key={s.e.id}>
+                      <text x={s.labelPos.x} y={s.labelPos.y - 4} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill="#ccc" style={{ textShadow: '0 0 2px rgba(0,0,0,0.6)' }}>
+                        {s.e.title}
+                      </text>
+                      <text x={s.labelPos.x} y={s.labelPos.y + 6} fontSize={6} textAnchor="middle" dominantBaseline="middle" fill="#bbb" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>
+                        {minutesToLabel(dur)}
+                      </text>
+                    </g>
+                  )
+                })())}
               </g>
             </>
           )
