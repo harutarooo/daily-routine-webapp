@@ -163,8 +163,8 @@ function EditModal({ data, onClose, onSave, onDelete }:{ data: EditData|null; on
           <button onClick={onClose} className="text-xs text-neutral-400 hover:text-neutral-200">閉じる</button>
         </div>
         <div className="space-y-2">
-          <input maxLength={8} value={form.title} onChange={e=>update('title', e.target.value)} placeholder="タイトル" className="w-full bg-neutral-700 border border-neutral-600 rounded px-2 py-1 text-sm placeholder:text-neutral-400" />
-          <div className="flex gap-2 text-sm">
+          <input maxLength={8} value={form.title} onChange={e=>update('title', e.target.value)} placeholder="タイトル" className="w-full bg-neutral-700 border border-neutral-600 rounded px-2 py-1 placeholder:text-neutral-400" />
+          <div className="flex gap-2">
             <select value={form.start} onChange={e=>update('start', Number(e.target.value))} className="flex-1 bg-neutral-700 border border-neutral-600 rounded px-2 py-1">
               {times.map(t=> <option key={t} value={t}>{minutesToLabel(t)}</option>)}
             </select>
@@ -177,7 +177,7 @@ function EditModal({ data, onClose, onSave, onDelete }:{ data: EditData|null; on
             <button key={s} type="button" onClick={()=>update('shade', s)} className={`w-8 h-8 rounded-full border border-neutral-600 ${form.shade===s? 'ring-2 ring-blue-400':''}`} style={{ backgroundColor: `hsl(0 0% ${100 - s*8}%)` }} />
           ))}</div>
         </div>
-        <div className="flex gap-2 pt-2 text-sm">
+  <div className="flex gap-2 pt-2">
           {form.id && <button onClick={()=> onDelete(form.id!)} className="flex-1 bg-red-600 hover:bg-red-500 text-white rounded py-2">削除</button>}
           <button onClick={save} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded py-2">保存</button>
         </div>
