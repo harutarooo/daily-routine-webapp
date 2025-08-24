@@ -5,5 +5,4 @@
 html, body, #root { height: 100%; }
 body { @apply bg-neutral-900 text-neutral-100 font-sans antialiased; }
 /* Prevent iOS input zoom (font-size >=16px) */
-input, select, button { font-size:16px; }
 input, select, textarea, button { font-size:16px; }
