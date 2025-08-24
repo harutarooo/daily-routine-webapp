@@ -2,7 +2,7 @@ export const SLOT_MINUTES = 30;
 export const MINUTES_PER_DAY = 1440;
 export const LAST_SLOT_START = MINUTES_PER_DAY - SLOT_MINUTES; // 1410 when 30m slot
 // 3段階（やや暗め中心） 明→暗 (1..3)
-export const SHADE_LIGHTNESS = [50, 38, 26];
+export const SHADE_LIGHTNESS = [39, 30, 21];
 export const SHADE_COUNT = SHADE_LIGHTNESS.length; // 現在 3
 export const STORAGE_KEYS = { weekday: 'weekdaySchedule', weekend: 'weekendSchedule', templates: 'scheduleTemplates' } as const;
 
