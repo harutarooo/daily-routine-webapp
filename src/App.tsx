@@ -19,7 +19,7 @@ export default function App(){
     setHighlightId(undefined)
   const start = minute; const end = Math.min(minute+SLOT_MINUTES, MINUTES_PER_DAY)
     setHighlightNew({ start, end })
-    const entry: ScheduleEntry = { id: crypto.randomUUID(), title: '', start, end, shade: 3 }
+  const entry: ScheduleEntry = { id: crypto.randomUUID(), title: '', start, end, shade: 2 }
     setTimeout(()=>{ setEditing(entry) }, 150)
   }
   function edit(id:string){

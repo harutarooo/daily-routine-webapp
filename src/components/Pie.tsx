@@ -33,7 +33,7 @@ export function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: PiePr
             <g key={e.id} onClick={(ev)=>{ev.stopPropagation(); onEdit(e.id)}} className="cursor-pointer">
               <path d={path} style={{ fill: `hsl(0 0% ${lightness}%)`, filter: isHL? 'brightness(1.5)': undefined }} className="transition-all duration-150" />
               {e.title && (
-                <text x={labelPos.x} y={labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill={lightness<50? '#fff':'#111'} style={{ pointerEvents:'none' }}>
+                <text x={labelPos.x} y={labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill="#999" style={{ pointerEvents:'none' }}>
                   {e.title}
                 </text>
               )}

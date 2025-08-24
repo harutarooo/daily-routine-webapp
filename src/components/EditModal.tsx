@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SLOT_MINUTES, SHADE_LIGHTNESS, MINUTES_PER_DAY } from '../constants/schedule.ts'
+import { SLOT_MINUTES, SHADE_LIGHTNESS, MINUTES_PER_DAY, SHADE_COUNT } from '../constants/schedule.ts'
 import type { EditData } from '../types/index.ts'
 import { Wheel } from './Wheel.tsx'
 
@@ -31,7 +31,7 @@ export function EditModal({ data, onClose, onSave, onDelete }:{ data: EditData|n
               <button key={d} type="button" onClick={()=> applyDuration(d)} className={`px-2 py-1 rounded text-[11px] border border-neutral-600 ${form.end-form.start===d? 'bg-blue-600 text-white':'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'}`}>{d<60? `${d}m` : d%60===0? `${d/60}h` : `${Math.floor(d/60)}.${(d%60)/30*5}h`}</button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-2">{[1,2,3,4,5].map(s=> (
+          <div className="flex flex-wrap gap-2">{Array.from({length: SHADE_COUNT}, (_,i)=> i+1).map(s=> (
             <button key={s} type="button" onClick={()=>update('shade', s)} className={`w-8 h-8 rounded-full border border-neutral-600 ${form.shade===s? 'ring-2 ring-blue-400':''}`} style={{ backgroundColor: `hsl(0 0% ${SHADE_LIGHTNESS[s-1]}%)` }} />
           ))}</div>
         </div>
