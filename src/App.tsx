@@ -88,7 +88,10 @@ function safeParse<T>(s: string|null): T|undefined { try { return s? JSON.parse(
 // Component: Pie schedule (simplified MVP - click to add, list below)
 interface HighlightNew { start:number; end:number }
 function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: { entries: ScheduleEntry[]; onAdd:(minute:number)=>void; onEdit:(id:string)=>void; highlightId?:string; highlightNew?:HighlightNew|null }) {
-  const size = 340; const r = size/2; const center = r; const wedgeRadius = r - 2; // 色を円周ぎりぎりまで
+  const size = 380; // 余白確保
+  const margin = 20; // ラベル用余白
+  const center = size/2;
+  const wedgeRadius = center - margin; // 実際の円グラフ半径（ラベルは外側）
   function handleClick(e: React.MouseEvent<SVGSVGElement>){
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left - center;
@@ -100,7 +103,7 @@ function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: { entries: S
   return (
     <div className="w-full flex flex-col items-center">
       <svg width={size} height={size} onClick={handleClick} className="touch-none select-none">
-        <circle cx={center} cy={center} r={wedgeRadius} className="fill-neutral-800 stroke-neutral-600" strokeWidth={2}/>
+        <circle cx={center} cy={center} r={wedgeRadius} className="fill-neutral-800" />
         {entries.map(e=>{
           const startA = (e.start/1440)*360; const endA = (e.end/1440)*360;
           const path = arcPath(center, center, wedgeRadius, startA, endA)
@@ -111,7 +114,7 @@ function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: { entries: S
           const labelPos = polar(center, center, wedgeRadius*0.55, midA);
           return (
             <g key={e.id} onClick={(ev)=>{ev.stopPropagation(); onEdit(e.id)}} className="cursor-pointer">
-              <path d={path} style={{ fill: `hsl(0 0% ${lightness}%)`, filter: isHL? 'brightness(1.4)': undefined }} className={`stroke-neutral-900 stroke-[0.75] transition-all duration-150`} />
+              <path d={path} style={{ fill: `hsl(0 0% ${lightness}%)`, filter: isHL? 'brightness(1.4)': undefined }} className="transition-all duration-150" />
               {e.title && span >= 8 && (
                 <text x={labelPos.x} y={labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill={lightness<50? '#fff':'#111'} style={{ pointerEvents:'none' }}>
                   {e.title}
@@ -120,15 +123,17 @@ function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: { entries: S
             </g>
           )
         })}
-        {highlightNew && (()=>{ const startA=(highlightNew.start/1440)*360; const endA=(highlightNew.end/1440)*360; const p=arcPath(center,center,wedgeRadius,startA,endA); return <path d={p} className="fill-blue-500/60 stroke-blue-300 stroke-[0.75] pointer-events-none" /> })()}
-        {/* hour ticks */}
+        {highlightNew && (()=>{ const startA=(highlightNew.start/1440)*360; const endA=(highlightNew.end/1440)*360; const p=arcPath(center,center,wedgeRadius,startA,endA); return <path d={p} className="fill-blue-500/60 pointer-events-none" /> })()}
+        {/* hour ticks & labels (labels outside the circle) */}
         {[...Array(24)].map((_,h)=>{
-          const a = (h/24)*360; const rad = (a-90)*Math.PI/180; const inner=r-10; const outer=r-4;
-          const x1=center+inner*Math.cos(rad); const y1=center+inner*Math.sin(rad); const x2=center+outer*Math.cos(rad); const y2=center+outer*Math.sin(rad);
-          const lr = r-30; const lx=center+lr*Math.cos(rad); const ly=center+lr*Math.sin(rad);
+          const a = (h/24)*360; const rad = (a-90)*Math.PI/180;
+          const tickInner = wedgeRadius - 8; const tickOuter = wedgeRadius - 2;
+          const x1=center+tickInner*Math.cos(rad); const y1=center+tickInner*Math.sin(rad);
+          const x2=center+tickOuter*Math.cos(rad); const y2=center+tickOuter*Math.sin(rad);
+          const labelR = wedgeRadius + 10; const lx=center+labelR*Math.cos(rad); const ly=center+labelR*Math.sin(rad);
           return <g key={h}>
-            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#666" strokeWidth={1} />
-            <text x={lx} y={ly} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill="#888">{h}</text>
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#777" strokeWidth={1} />
+            <text x={lx} y={ly} fontSize={11} textAnchor="middle" dominantBaseline="middle" fill="#aaa">{h}</text>
           </g>
         })}
       </svg>
