@@ -68,13 +68,72 @@ function reducer(state: State, action: Action): State {
 
 function cloneEntry(e: ScheduleEntry): ScheduleEntry { return { ...e, id: crypto.randomUUID() } }
 
+const SLOT_MINUTES = 30;
 function minutesToLabel(m:number){ const h=Math.floor(m/60); const mm=m%60; return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}` }
+// 5段階（やや暗め中心）明→暗
+const SHADE_LIGHTNESS = [80, 65, 50, 38, 26];
+function normalizeShade(shade:number){
+  if(shade>=1 && shade<=5) return shade;
+  if(shade>5) return Math.min(5, Math.max(1, Math.round(shade/2))); // 10段階→5段階縮約
+  return 3;
+}
+
+// ドラムロール風ホイールコンポーネント（シンプル実装）
+interface WheelProps { label: string; value: number; options: number[]; onChange:(val:number)=>void }
+function Wheel({ label, value, options, onChange }: WheelProps){
+  const visible = 5; // 奇数推奨
+  const itemHeight = 36;
+  const containerHeight = itemHeight * visible;
+  const selectedIndex = Math.max(0, options.indexOf(value));
+  // スクロール位置同期
+  return (
+    <div className="flex flex-col items-center text-xs select-none">
+      <span className="mb-1 text-neutral-400">{label}</span>
+      <div
+        className="relative w-full overflow-y-scroll no-scrollbar snap-y snap-mandatory rounded border border-neutral-600 bg-neutral-700"
+        style={{ height: containerHeight }}
+        onScroll={e=>{
+          const top = (e.target as HTMLElement).scrollTop;
+          const idx = Math.round(top / itemHeight);
+          const clamped = Math.min(options.length-1, Math.max(0, idx));
+          const newVal = options[clamped];
+          if(newVal !== value) onChange(newVal);
+        }}
+        ref={el=>{
+          if(el){
+            const desired = selectedIndex * itemHeight;
+            if(Math.abs(el.scrollTop - desired) > 4) el.scrollTop = desired;
+          }
+        }}
+      >
+        <div style={{ paddingTop: itemHeight*2, paddingBottom: itemHeight*2 }}>
+          {options.map(opt=> (
+            <div key={opt}
+      className={"h-9 flex items-center justify-center snap-start transition-colors " + (opt===value? 'bg-blue-500/40 text-white font-semibold rounded':'text-neutral-300')}
+              style={{ height: itemHeight }}
+              onClick={()=> onChange(opt)}
+            >{minutesToLabel(opt)}</div>
+          ))}
+        </div>
+    <div className="pointer-events-none absolute top-1/2 left-0 w-full h-9 -translate-y-1/2 border-y border-blue-400/60" />
+      </div>
+    </div>
+  )
+}
 
 function usePersistentState(){
   const [state, dispatch] = useReducer(reducer, undefined, ()=>{
-    const weekday = safeParse<DaySchedule>(localStorage.getItem(STORAGE_KEYS.weekday)) || emptySchedule
-    const weekend = safeParse<DaySchedule>(localStorage.getItem(STORAGE_KEYS.weekend)) || emptySchedule
-    const templates = safeParse<DayTemplate[]>(localStorage.getItem(STORAGE_KEYS.templates)) || []
+    const weekdayRaw = safeParse<DaySchedule>(localStorage.getItem(STORAGE_KEYS.weekday)) || emptySchedule
+    const weekendRaw = safeParse<DaySchedule>(localStorage.getItem(STORAGE_KEYS.weekend)) || emptySchedule
+    const templatesRaw = safeParse<DayTemplate[]>(localStorage.getItem(STORAGE_KEYS.templates)) || []
+    const normalize = (s:DaySchedule):DaySchedule => ({ entries: s.entries.map(e=> ({ ...e,
+      start: Math.min(1410, Math.round(e.start / SLOT_MINUTES) * SLOT_MINUTES),
+      end: Math.min(1440, Math.round(e.end / SLOT_MINUTES) * SLOT_MINUTES),
+      shade: normalizeShade(e.shade)
+    })).filter(e=> e.end>e.start) })
+    const weekday = normalize(weekdayRaw)
+    const weekend = normalize(weekendRaw)
+    const templates = templatesRaw.map(t=> ({ ...t, entries: normalize({ entries: t.entries }).entries }))
     return { mode: 'weekday', weekday, weekend, templates } as State
   })
   useEffect(()=>{ localStorage.setItem(STORAGE_KEYS.weekday, JSON.stringify(state.weekday)) }, [state.weekday])
@@ -97,7 +156,7 @@ function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: { entries: S
     const x = e.clientX - rect.left - center;
     const y = e.clientY - rect.top - center;
     const angle = (Math.atan2(y,x) * 180/Math.PI + 450) % 360; // 0 at top
-    const minutes = Math.round((angle/360)*1440/15)*15 % 1440;
+  const minutes = Math.round((angle/360)*1440/SLOT_MINUTES)*SLOT_MINUTES % 1440;
     onAdd(minutes);
   }
   return (
@@ -106,15 +165,15 @@ function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: { entries: S
         <circle cx={center} cy={center} r={wedgeRadius} className="fill-neutral-800" />
         {entries.map(e=>{
           const startA = (e.start/1440)*360; const endA = (e.end/1440)*360;
-          const path = arcPath(center, center, wedgeRadius, startA, endA)
-          const lightness = 100 - e.shade*8;
+      const path = arcPath(center, center, wedgeRadius, startA, endA)
+      const lightness = SHADE_LIGHTNESS[normalizeShade(e.shade)-1] ?? 50;
           const isHL = highlightId===e.id;
           const midA = (startA + endA)/2;
           const span = endA - startA;
           const labelPos = polar(center, center, wedgeRadius*0.55, midA);
           return (
             <g key={e.id} onClick={(ev)=>{ev.stopPropagation(); onEdit(e.id)}} className="cursor-pointer">
-              <path d={path} style={{ fill: `hsl(0 0% ${lightness}%)`, filter: isHL? 'brightness(1.4)': undefined }} className="transition-all duration-150" />
+        <path d={path} style={{ fill: `hsl(0 0% ${lightness}%)`, filter: isHL? 'brightness(1.5)': undefined }} className="transition-all duration-150" />
               {e.title && span >= 8 && (
                 <text x={labelPos.x} y={labelPos.y} fontSize={10} textAnchor="middle" dominantBaseline="middle" fill={lightness<50? '#fff':'#111'} style={{ pointerEvents:'none' }}>
                   {e.title}
@@ -123,7 +182,7 @@ function Pie({ entries, onAdd, onEdit, highlightId, highlightNew }: { entries: S
             </g>
           )
         })}
-        {highlightNew && (()=>{ const startA=(highlightNew.start/1440)*360; const endA=(highlightNew.end/1440)*360; const p=arcPath(center,center,wedgeRadius,startA,endA); return <path d={p} className="fill-blue-500/60 pointer-events-none" /> })()}
+  {highlightNew && (()=>{ const startA=(highlightNew.start/1440)*360; const endA=(highlightNew.end/1440)*360; const p=arcPath(center,center,wedgeRadius,startA,endA); return <path d={p} className="fill-blue-500/60 pointer-events-none" /> })()}
         {/* hour ticks & labels (labels outside the circle) */}
         {[...Array(24)].map((_,h)=>{
           const a = (h/24)*360; const rad = (a-90)*Math.PI/180;
@@ -154,7 +213,13 @@ function EditModal({ data, onClose, onSave, onDelete }:{ data: EditData|null; on
   if(!form) return null
   function update<K extends keyof EditData>(k:K, v:EditData[K]){ setForm(prev => prev ? { ...prev, [k]: v } : prev) }
   function save(){ if(form) onSave(form) }
-  const times = Array.from({length:96},(_,i)=> i*15)
+  const slots = Array.from({length: 1440 / SLOT_MINUTES}, (_,i)=> i*SLOT_MINUTES) // 0..1410
+  const endSlots = [...slots.slice(1), 1440] // 終了は24:00含む
+  const DURATIONS = [30, 60, 90, 120, 300];
+  function applyDuration(mins:number){
+    if(!form) return;
+    update('end', Math.min(1440, form.start + mins));
+  }
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-4">
       <div className="w-full max-w-sm bg-neutral-800 text-neutral-100 rounded-xl p-4 space-y-3 max-h-[90%] overflow-y-auto shadow-xl border border-neutral-700">
@@ -164,17 +229,21 @@ function EditModal({ data, onClose, onSave, onDelete }:{ data: EditData|null; on
         </div>
         <div className="space-y-2">
           <input maxLength={8} value={form.title} onChange={e=>update('title', e.target.value)} placeholder="タイトル" className="w-full bg-neutral-700 border border-neutral-600 rounded px-2 py-1 placeholder:text-neutral-400" />
-          <div className="flex gap-2">
-            <select value={form.start} onChange={e=>update('start', Number(e.target.value))} className="flex-1 bg-neutral-700 border border-neutral-600 rounded px-2 py-1">
-              {times.map(t=> <option key={t} value={t}>{minutesToLabel(t)}</option>)}
-            </select>
-            <span className="self-center">～</span>
-            <select value={form.end} onChange={e=>update('end', Number(e.target.value))} className="flex-1 bg-neutral-700 border border-neutral-600 rounded px-2 py-1">
-              {times.slice(1).map(t=> <option key={t} value={t}>{minutesToLabel(t)}</option>)}
-            </select>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Wheel label="開始" value={form.start} onChange={v=>{ if(v < form.end){ update('start', v) } else { update('start', v); update('end', Math.min(1440, v + SLOT_MINUTES)) } }} options={slots} />
+            </div>
+            <div className="flex-1">
+              <Wheel label="終了" value={form.end} onChange={v=>{ if(v>form.start){ update('end', v) } }} options={endSlots} />
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">{[1,2,3,4,5,6,7,8,9,10].map(s=> (
-            <button key={s} type="button" onClick={()=>update('shade', s)} className={`w-8 h-8 rounded-full border border-neutral-600 ${form.shade===s? 'ring-2 ring-blue-400':''}`} style={{ backgroundColor: `hsl(0 0% ${100 - s*8}%)` }} />
+          <div className="flex flex-wrap gap-2 pt-1">
+            {DURATIONS.map(d=> (
+              <button key={d} type="button" onClick={()=> applyDuration(d)} className={`px-2 py-1 rounded text-[11px] border border-neutral-600 ${form.end-form.start===d? 'bg-blue-600 text-white':'bg-neutral-700 text-neutral-300 hover:bg-neutral-600'}`}>{d<60? `${d}m` : d%60===0? `${d/60}h` : `${Math.floor(d/60)}.${(d%60)/30*5}h`}</button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">{[1,2,3,4,5].map(s=> (
+            <button key={s} type="button" onClick={()=>update('shade', s)} className={`w-8 h-8 rounded-full border border-neutral-600 ${form.shade===s? 'ring-2 ring-blue-400':''}`} style={{ backgroundColor: `hsl(0 0% ${SHADE_LIGHTNESS[s-1]}%)` }} />
           ))}</div>
         </div>
   <div className="flex gap-2 pt-2">
@@ -195,9 +264,9 @@ export default function App(){
   const [highlightNew, setHighlightNew] = useState<HighlightNew|null>(null)
   function createAt(minute:number){
     setHighlightId(undefined)
-    const start = minute; const end = Math.min(minute+15, 1440)
+  const start = minute; const end = Math.min(minute+SLOT_MINUTES, 1440)
     setHighlightNew({ start, end })
-    const entry: ScheduleEntry = { id: crypto.randomUUID(), title: '', start, end, shade: 5 }
+  const entry: ScheduleEntry = { id: crypto.randomUUID(), title: '', start, end, shade: 3 }
     setTimeout(()=>{ setEditing(entry) }, 150)
   }
   function edit(id:string){
@@ -212,18 +281,17 @@ export default function App(){
     else dispatch({ type:'add', entry: d as ScheduleEntry })
     setEditing(null); setHighlightNew(null); setHighlightId(undefined)
   }
-  function valid(d:EditData){ return d.title.trim().length>0 && d.end>d.start && d.end-d.start>=15 }
+  function valid(d:EditData){ return d.title.trim().length>0 && d.end>d.start && d.end-d.start>=SLOT_MINUTES }
   return (
     <div className="min-h-screen w-full flex flex-col">
-      <header className="p-2 flex gap-2 justify-center">
-        <button className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${state.mode==='weekday'? 'bg-blue-600 text-white':'bg-neutral-700 text-neutral-300'}`} onClick={()=>dispatch({type:'switch', mode:'weekday'})}>平日</button>
-        <button className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${state.mode==='weekend'? 'bg-blue-600 text-white':'bg-neutral-700 text-neutral-300'}`} onClick={()=>dispatch({type:'switch', mode:'weekend'})}>休日</button>
-        <button className="ml-4 px-3 py-1 rounded-full text-xs font-medium bg-neutral-700 text-neutral-200 hover:bg-neutral-600" onClick={()=> setShowTemplates(true)}>テンプレ</button>
-      </header>
-  <main className="flex-1 flex flex-col items-center justify-center gap-4 pb-8">
+      <main className="flex-1 flex flex-col items-center justify-center gap-4 pb-24 pt-2">
         <Pie entries={schedule.entries} onAdd={createAt} onEdit={edit} highlightId={highlightId} highlightNew={highlightNew} />
-        {/* 予定リストは表示しない（要件により削除） */}
       </main>
+      <footer className="fixed bottom-0 left-0 right-0 bg-neutral-900/95 backdrop-blur border-t border-neutral-700 p-3 flex items-center justify-center gap-3">
+        <button className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${state.mode==='weekday'? 'bg-blue-600 text-white':'bg-neutral-700 text-neutral-300'}`} onClick={()=>dispatch({type:'switch', mode:'weekday'})}>平日</button>
+        <button className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${state.mode==='weekend'? 'bg-blue-600 text-white':'bg-neutral-700 text-neutral-300'}`} onClick={()=>dispatch({type:'switch', mode:'weekend'})}>休日</button>
+        <button className="ml-2 px-4 py-2 rounded-full text-xs font-medium bg-neutral-700 text-neutral-200 hover:bg-neutral-600" onClick={()=> setShowTemplates(true)}>テンプレ</button>
+      </footer>
       {editing && <EditModal data={editing} onClose={()=>{setEditing(null); setHighlightId(undefined); setHighlightNew(null)}} onSave={save} onDelete={(id)=>{dispatch({type:'delete', id}); setEditing(null); setHighlightId(undefined); setHighlightNew(null)}} />}
       {showTemplates && <TemplateModal templates={state.templates} onApply={(id)=>{dispatch({type:'applyTemplate', templateId:id}); setShowTemplates(false); setHighlightId(undefined); setHighlightNew(null)}} onSave={(name)=>{dispatch({type:'saveTemplate', name}); setShowTemplates(false)}} onClose={()=> setShowTemplates(false)} />}
     </div>
