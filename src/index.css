@@ -4,7 +4,6 @@
 
 html, body, #root { height: 100%; }
 body { @apply bg-neutral-900 text-neutral-100 font-sans antialiased; }
-/* iOS フォーカス時の自動ズーム回避: フォーム要素のフォントサイズを16px以上に統一 */
-input, select, textarea, button { font-size:16px; }
 /* Prevent iOS input zoom (font-size >=16px) */
 input, select, button { font-size:16px; }
+input, select, textarea, button { font-size:16px; }
